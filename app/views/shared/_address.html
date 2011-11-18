@@ -1,0 +1,11 @@
+<%= fields_for_address(address) do |address_form| %>
+  <div class="address">
+    Address: <%= address_form.text_field :addr, :class=> "address_input"  %>
+    lat: <%= address_form.text_field :lat, :class => "lat" %>
+    lng: <%= address_form.text_field :lng, :class => "lng" %>
+    country: <%= address_form.text_field :country, :class => "country" %>
+    city: <%= address_form.text_field :city, :class => "city" %>
+    <a href="#" class="mark_in_google">Mark in google</a>
+    <%#= link_to_function "remove", "$(this).up('.address').remove()" %>
+  </div>
+<% end %>

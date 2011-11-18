@@ -1,0 +1,126 @@
+- form_tag(search_suppliers_path, :method => :get) do
+  %label
+    Search:
+    = text_field_tag(:q, params[:q])
+    =# text_field_tag(:region, params[:region])
+%ul.category_facet
+  - @search.facet(:category_id).rows.each do |row|
+    %li.facet_row
+      = link_to(row.instance.name, params.merge(:category_id => row.value))
+      %span.count== (#{row.count})
+
+.results
+  - @search.each_hit_with_result do |hit, supplier|
+    .result
+      %p 
+        name: 
+        = h supplier.name
+      %p 
+        description:
+        = h truncate(supplier.body, :length => 100)
+      %p
+        address:
+        - if not supplier.addresses.blank?
+          - address = supplier.addresses.first
+          = address.addr 
+          country:
+          = address.country
+          city:
+          = address.city
+          = address.lat 
+          = address.lng 
+      %h6== (#{h hit.score})
+.pagination
+  = will_paginate(@search.results)
+
+#map_canvas{:style => "width:800px; height:600px;"}
+
+= stylesheet_link_tag "http://jquery.bassistance.de/autocomplete/jquery.autocomplete.css" 
+= javascript_include_tag "http://maps.googleapis.com/maps/api/js?sensor=true&region=GB"
+= javascript_include_tag "http://jquery.bassistance.de/autocomplete/jquery.autocomplete.js"
+
+:javascript
+  console.log("init jquery");
+  $(document).ready(function() {  
+    console.log("init auotcomplete");
+    $("#q").autocomplete("#{suggestion_suppliers_path}", {
+      width: 260,
+      selectFirst: false
+    });
+    console.log("init auto complete done");
+  });
+
+
+
+:javascript
+  console.log("init locations");
+  var locations = [#{gmap_marker_locations_js_var(@search)}]
+  console.log("locations size:" + locations.length);
+
+  function setMarkers(map, locations) {
+      var image = '/images/cyclingsport.png';
+      var infowindow = new google.maps.InfoWindow();
+      var bounds = new google.maps.LatLngBounds();
+      for (var i = 0; i < locations.length; i++) {
+        var myLatLng = new google.maps.LatLng(locations[i][1], locations[i][2]);
+        var marker = new google.maps.Marker({
+          position: myLatLng,
+          map: map,
+          //shadow: shadow,
+          icon: image,
+          //shape: shape,
+          title: locations[i][0]
+          //zIndex: beach[3]
+        });
+        google.maps.event.addListener(marker, 'click', (function(marker, i) {
+          return function() {
+            window.location = locations[i][3];
+          }
+        })(marker, i));
+  
+        google.maps.event.addListener(marker, 'mouseover', (function(marker, i) {
+          return function() {
+            infowindow.setContent(locations[i][0] +"<p><img src='/images/cyclingsport.png'/>");
+            infowindow.open(map, marker);
+          }
+        })(marker, i));
+  
+        bounds.extend(myLatLng);
+        map.fitBounds(bounds);
+    }
+  }
+
+  var geocoder;
+  var map;
+  function initialize() {
+    geocoder = new google.maps.Geocoder();
+    var latlng = new google.maps.LatLng(-34.397, 150.644);
+    var myOptions = {
+      zoom: 8,
+      center: latlng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    }
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+    setMarkers(map, locations);
+  }
+
+  function codeAddress() {
+    var address = document.getElementById("address").value;
+    geocoder.geocode( { 'address': address}, function(results, status) {
+      if (status == google.maps.GeocoderStatus.OK) {
+        map.setCenter(results[0].geometry.location);
+        map.setZoom(15);
+        var marker = new google.maps.Marker({
+            map: map,
+            position: results[0].geometry.location
+        });
+        console.log(results[0].geometry.location.lat());
+        console.log(results[0].geometry.location.lng());
+      } else {
+        alert("Geocode was not successful for the following reason: " + status);
+      }
+    });
+  }
+  initialize();
+
+

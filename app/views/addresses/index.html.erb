@@ -1,0 +1,119 @@
+<%#= raw Cartographer::Header.new.to_s %>
+<%#= raw @map.to_html %>
+<div id="map" style="width=600px;height=300px">[map]</div>
+
+<%= link_to 'New Address', new_address_path %>
+<input id="address" type="textbox" value="Sydney, NSW"> 
+<input type="button" id="geo_code_button" value="get geo code" onclick="codeAddress();"/>
+<%#=javascript_include_tag src="http://code.jquery.com/jquery-1.6.2.min.js" %>
+<div id="map_canvas" style="width:800px; height:600px;"></div>
+<script type="text/javascript"
+    src="http://maps.googleapis.com/maps/api/js?sensor=true&region=GB">
+</script>
+
+
+<script type="text/javascript">
+/*
+var map; 
+var geocoder;
+
+function codeAddress() {
+  var address = document.getElementById("address").value;
+  geocoder.geocode( { 'address': address}, function(results, status) {
+    alert(status);
+    if (status == google.maps.GeocoderStatus.OK) {
+      alert('ok');
+      map.setCenter(results[0].geometry.location);
+      var marker = new google.maps.Marker({
+          map: map, 
+          position: results[0].geometry.location
+      });
+    } else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+  });
+}
+
+function initialize() {
+  var myOptions = {
+    zoom: 10,
+    center: new google.maps.LatLng(0, 0),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  }
+    map = new google.maps.Map(
+    document.getElementById("map_canvas"),
+    myOptions);
+  setMarkers(map, beaches);
+}
+*/
+var beaches = [
+  ['荔枝湾风味海鲜酒楼',23.161825915469624, 113.26492309570312, "http://www.google.com","荔枝湾风味海鲜酒楼 地址"],
+  ['北京天上人间',39.908946186502526, 116.40941619873047, "http://www.baidu.com", "北京天上人间地址"]
+];
+
+function setMarkers(map, locations) {
+    var image = '/images/cyclingsport.png';
+    var infowindow = new google.maps.InfoWindow();
+    var bounds = new google.maps.LatLngBounds();
+    for (var i = 0; i < locations.length; i++) {
+      var myLatLng = new google.maps.LatLng(locations[i][1], locations[i][2]);
+      var marker = new google.maps.Marker({
+        position: myLatLng,
+        map: map,
+        //shadow: shadow,
+        icon: image,
+        //shape: shape,
+        title: locations[i][0]
+        //zIndex: beach[3]
+      });
+      google.maps.event.addListener(marker, 'click', (function(marker, i) {
+        return function() {
+          window.location = locations[i][3];
+        }
+      })(marker, i));
+
+      google.maps.event.addListener(marker, 'mouseover', (function(marker, i) {
+        return function() {
+          infowindow.setContent(locations[i][0] +"<p><img src='/images/cyclingsport.png'/>");
+          infowindow.open(map, marker);
+        }
+      })(marker, i));
+
+      bounds.extend(myLatLng);
+      map.fitBounds(bounds);
+  }
+}
+
+  var geocoder;
+  var map;
+  function initialize() {
+    geocoder = new google.maps.Geocoder();
+    var latlng = new google.maps.LatLng(-34.397, 150.644);
+    var myOptions = {
+      zoom: 8,
+      center: latlng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    }
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+    setMarkers(map, beaches);
+  }
+ 
+  function codeAddress() {
+    var address = document.getElementById("address").value;
+    geocoder.geocode( { 'address': address}, function(results, status) {
+      if (status == google.maps.GeocoderStatus.OK) {
+        map.setCenter(results[0].geometry.location);
+        map.setZoom(15);
+        var marker = new google.maps.Marker({
+            map: map, 
+            position: results[0].geometry.location
+        });
+        console.log(results[0].geometry.location.lat());
+        console.log(results[0].geometry.location.lng());
+      } else {
+        alert("Geocode was not successful for the following reason: " + status);
+      }
+    });
+  }
+  initialize();
+</script>

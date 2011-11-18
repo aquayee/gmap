@@ -1,0 +1,243 @@
+<% if @supplier.errors.any? %>
+<div id="errors_wrapper">
+  <ul>
+    <% @supplier.errors.full_messages.each do |msg| %>
+      <li><%= msg %></li>
+    <% end %>
+  </ul>
+</div>
+<% end %>
+
+<%= form_for(@supplier) do |f| %>
+  <p>
+    Name: <%= f.text_field :name %>
+  </p>
+  <%= "Total address #{@supplier.addresses.size}" %>
+  <a href="#" id="new_address">New address</a>
+  <a href="#" id="new_contact">New contact</a>
+  <div id="addresses">
+    <%= render :partial => 'shared/address', :collection => @supplier.addresses %>
+  </div>
+  <div id="contacts">
+    <%= render :partial => 'shared/contact', :collection => @supplier.contacts %>
+  </div>
+
+  <p><%= f.submit %>
+
+<% end %>
+
+<%= link_to 'Back', suppliers_path %>
+
+<div id="map_canvas" style="width:800px; height:600px;"></div>
+<script type="text/javascript"
+    src="http://maps.googleapis.com/maps/api/js?sensor=true&region=GB&language=zh-CN">
+</script>
+
+<script>
+$(document).ready(function() {  
+  if(typeof console === "undefined") {
+    console = { log: function() { } };
+  }
+
+  $("#new_address").click(function(){ 
+    $("#addresses .address:first").clone().find("input").val('').end().appendTo("#addresses");
+  });
+  $("#new_contact").click(function(){ 
+    console.log("add new contact");
+    $("#contacts .contact:first").clone().find("input").val('').end().appendTo("#contacts");
+    console.log("clone input done");
+  });
+  $(".remove").click(function(){
+    console.log("delete the contact");
+    $(this).parent(".contact").remove();
+    console.log("remove done");
+  });
+  
+  $(".mark_in_google").click(function(){
+    console.log("mark in google now");
+    initMap();
+    var address = $(this).parents(".address").find("input").val();
+    var latInput = $(this).parents(".address").find(".lat");
+    var lngInput = $(this).parents(".address").find(".lng");
+    console.log("input address:" + address);
+    console.log(latInput)
+    console.log(lngInput)
+    codeAddress(address, latInput, lngInput);
+  });
+
+  var map;
+  var markersArray = [];
+  var auto_marker; //For the auto query address, when manual click need to remove it.
+  var geocoder;
+
+
+
+  function initMap()
+  {
+    var latlng = new google.maps.LatLng(62, 49); //Default lat lng should be in China.
+    var myOptions = {
+      zoom: 10,
+      center: latlng,
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    };
+    map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+    // add a click event handler to the map object
+    google.maps.event.addListener(map, "click", function(event)
+    {
+      // place a marker
+      placeMarker(event.latLng);
+
+      // display the lat/lng in your form's lat/lng fields
+      $("#addresses .address:first").find(".lat").val(event.latLng.lat());
+      $("#addresses .address:first").find(".lng").val(event.latLng.lng());
+      var country = $("#addresses .address:first").find(".country");
+      var city = $("#addresses .address:first").find(".city");
+      
+      //Decode the country & city, it would change the country & city
+      reverseGeoCode(event.latLng.lat(), event.latLng.lng());
+      //document.getElementById("lat").value = event.latLng.lat();
+      //document.getElementById("lng").value = event.latLng.lng();
+    });
+    geocoder = new google.maps.Geocoder();
+  }
+
+  function setupCountryCity(country, city)
+  {
+      $("#addresses .address:first").find(".country").val(country);
+      var city = $("#addresses .address:first").find(".city").val(city);
+  }
+
+  function placeMarker(location) {
+      // first remove all markers if there are any
+      deleteOverlays();
+      var marker = new google.maps.Marker({
+          position: location, 
+          map: map
+      });
+      // add marker in markers array
+      markersArray.push(marker);
+      //map.setCenter(location);
+  }
+
+  // Deletes all markers in the array by removing references to them
+  function deleteOverlays() {
+    if (markersArray) {
+      for (i in markersArray) {
+        markersArray[i].setMap(null);
+      }
+      markersArray.length = 0;
+    }
+    //Also delete the auto marker
+    if (auto_marker){
+      auto_marker.setMap(null);
+    }else
+      console.log("no need to delete auto marker");
+  }
+
+  //Check in google map by address name
+  //Trick way, reset the input box of lat and lng, should be removed later
+  function codeAddress(address, lat, lng) {
+    //var address = document.getElementById("address").value;
+    geocoder.geocode( { 'address': address}, function(results, status) {
+    if (status == google.maps.GeocoderStatus.OK) {
+      deleteOverlays(); //Clean up the manual marker first. It would also delete the auto marker, so don't put last line.
+      map.setCenter(results[0].geometry.location);
+      map.setZoom(15);
+      auto_marker = new google.maps.Marker({
+        map: map,
+        position: results[0].geometry.location
+      });
+      //Save the lat lng in input box
+      console.log(results[0].geometry.location.lat());
+      console.log(results[0].geometry.location.lng());  
+      lat.val( results[0].geometry.location.lat() );
+      lng.val( results[0].geometry.location.lng() );
+      //Decode lat and lng to get city, country
+      reverseGeoCode(results[0].geometry.location.lat(), results[0].geometry.location.lng());
+    } else {
+      alert("Geocode was not successful for the following reason: " + status);
+    }
+    });
+  }//end codeAddress()
+  
+
+  function isNullOrWhitespace(text) {
+    if (text == null) {
+      return true;
+    }
+    return text.replace(/\s/gi, '').length < 1;
+  }
+
+  function getCity(results)
+  {
+    for (var i = 0; i < results[0].address_components.length; i++)
+    {
+      //var shortname = results[0].address_components[i].short_name;
+      var longname = results[0].address_components[i].long_name;
+      var type = results[0].address_components[i].types;
+      console.log(type);
+      console.log(longname);
+      if (type.indexOf("locality") != -1)
+      {
+        return longname;
+      }
+    }
+  }
+ 
+
+  function getCountry(results)
+  {
+    for (var i = 0; i < results[0].address_components.length; i++)
+    {
+      var shortname = results[0].address_components[i].short_name;
+      var longname = results[0].address_components[i].long_name;
+      var type = results[0].address_components[i].types;
+      console.log(type);
+      console.log(longname);
+      if (type.indexOf("country") != -1)
+      {
+        return longname;
+        //always return longname 
+        //  if (!isNullOrWhitespace(shortname))
+        //  {
+        //      return shortname;
+        //  }
+        //  else
+        //  {
+        //      return longname;
+        //  }
+      }
+    }
+  }
+
+  //Get address by lat & lng, Revesr geocoder to get country and city information
+  function reverseGeoCode(lat,lng) {
+    console.log("decoding lat & lng");
+    console.log(lat);
+    console.log(lng);
+
+    var latlng = new google.maps.LatLng(lat, lng);
+    geocoder.geocode({'latLng': latlng}, function(results, status) {
+      if (status == google.maps.GeocoderStatus.OK) {
+        //Not sure why needs results[1]
+        if (results[1]) {
+          //map.setZoom(11);
+          //marker = new google.maps.Marker({
+          //    position: latlng,
+          //    map: map
+          //});
+          //infowindow.setContent(results[1].formatted_address);
+          //infowindow.open(map, marker);
+          //
+          console.log( getCountry(results) ); 
+          console.log( getCity(results) ); 
+          setupCountryCity( getCountry(results) , getCity(results) );
+        }
+      } else {
+        alert("Geocoder failed due to: " + status);
+      }
+    });
+  }
+
+});
+</script>

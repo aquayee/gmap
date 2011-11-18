@@ -1,0 +1,9 @@
+<%= fields_for_contact(contact) do |contact_form| %>
+  <div class="contact">
+    Name: <%= contact_form.text_field :name %>
+    Kind: <%= contact_form.text_field :kind %>
+    Contact: <%= contact_form.text_field :contact_no %>
+    <a href="javascript:void(0);" class="remove">Remove</a>
+
+  </div>
+<% end %>

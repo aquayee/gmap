@@ -1,0 +1,104 @@
+<h1>Listing addresses</h1>
+
+<table>
+  <tr>
+    <th>Addr</th>
+    <th>Body</th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @addresses.each do |address| %>
+  <tr>
+    <td><%= address.addr %></td>
+    <td><%= address.body %></td>
+    <td><%= link_to 'Show', address %></td>
+    <td><%= link_to 'Edit', edit_address_path(address) %></td>
+    <td><%= link_to 'Destroy', address, :confirm => 'Are you sure?', :method => :delete %></td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+# for Rails 3+ you need to make use of 'raw'
+<%#= raw Cartographer::Header.new.to_s %>
+<%#= raw @map.to_html %>
+<div id="map" style="width=600px;height=300px">[map]</div>
+
+<%= link_to 'New Address', new_address_path %>
+
+
+<div id="map_canvas" style="width:500px; height:300px;"></div>
+<script type="text/javascript"
+    src="http://maps.googleapis.com/maps/api/js?sensor=true&region=GB">
+</script>
+
+
+<script type="text/javascript">
+function initialize() {
+  var myOptions = {
+    zoom: 10,
+    center: new google.maps.LatLng(0, 0),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  }
+  var map = new google.maps.Map(
+    document.getElementById("map_canvas"),
+    myOptions);
+  setMarkers(map, beaches);
+}
+
+var beaches = [
+  ['荔枝湾风味海鲜酒楼',23.161825915469624, 113.26492309570312, "http://www.google.com","荔枝湾风味海鲜酒楼 地址"],
+  ['北京天上人间',39.908946186502526, 116.40941619873047, "http://www.baidu.com", "北京天上人间地址"]
+];
+
+function setMarkers(map, locations) {
+    /*
+    var image = new google.maps.MarkerImage('images/beachflag.png',
+      new google.maps.Size(20, 32),
+      new google.maps.Point(0,0),
+      new google.maps.Point(0, 32));
+    var shadow = new google.maps.MarkerImage('images/beachflag_shadow.png',
+      new google.maps.Size(37, 32),
+      new google.maps.Point(0,0),
+      new google.maps.Point(0, 32));
+    var shape = {
+      coord: [1, 1, 1, 20, 18, 20, 18 , 1],
+      type: 'poly'
+    };
+    */
+
+    var bounds = new google.maps.LatLngBounds();
+    for (var i = 0; i < locations.length; i++) {
+      var beach = locations[i];
+      var myLatLng = new google.maps.LatLng(beach[1], beach[2]);
+      var marker = new google.maps.Marker({
+        position: myLatLng,
+        map: map,
+        //shadow: shadow,
+        //icon: image,
+        //shape: shape,
+        title: beach[0]
+        //zIndex: beach[3]
+      });
+      google.maps.event.addListener(marker, 'click', (function(marker, i) {
+        return function() {
+          window.location = beach[3];
+        }
+      })(marker, i));
+      bounds.extend(myLatLng);
+      map.fitBounds(bounds);
+      /*
+      var infowindow = new google.maps.InfoWindow({
+          content: beach[4],
+          size: new google.maps.Size(50,50) 
+      });
+      google.maps.event.addListener(marker, 'mouseover', function() {
+        infowindow.open(map,marker);
+      });
+      */
+  }
+}
+  initialize();
+</script>
